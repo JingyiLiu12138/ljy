@@ -1,166 +1,189 @@
-#pragma once
-#pragma once
 
-
-#include<stdint.h>
-#include<stdlib.h>
-#include<string.h>
-#include<vector>
+#include <iostream>
+#include <intrin.h>
 using namespace std;
 
-#define SM3_A 0x7380166f
-#define SM3_B 0x4914b2b9
-#define SM3_C 0x172442d7
-#define SM3_D 0xda8a0600
-#define SM3_E 0xa96f30bc
-#define SM3_F 0x163138aa
-#define SM3_G 0xe38dee4d
-#define SM3_H 0xb0fb0e4e
+#define u8 unsigned char
+#define u32 unsigned long
 
-//长度拓展攻击使用的已知压缩值H(M0)
-#define extend_attack_A 0x66c7f0f4
-#define extend_attack_B 0x62eeedd9
-#define extend_attack_C 0xd1f2d46b
-#define extend_attack_D 0xdc10e4e2
-#define extend_attack_E 0x4167c487
-#define extend_attack_F 0x5cf2f7a2
-#define extend_attack_G 0x297da02b
-#define extend_attack_H 0x8f4ba8e0
+void SM3(u8* input, unsigned int len, u8* output);
+void printt_u8(u8* input);
+void u8_32(u8* in, u32* out);
+u32 shift_l(u32 a, u8 w);
 
+__m128i indexx = _mm_setr_epi8(3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12);
 
-#define T0 0x79cc4519
-#define T1 0x7a879d8a
+/*u32 IV[8] = {
+	0x7380166f, 0x4914b2b9, 0x172442d7, 0xda8a0600,
+	0xa96f30bc, 0x163138aa, 0xe38dee4d, 0xb0fb0e4e
+};*/
 
+u32 T[2] = {
+	0x79cc4519,0x7a879d8a
+};
+u32 FF0(u32 x, u32 y, u32 z) {
+	return x ^ y ^ z;
+}
+u32 FF1(u32 x, u32 y, u32 z) {
+	return((x & y) | (x & z) | (y & z));
+}
+u32 GG0(u32 x, u32 y, u32 z) {
+	return x ^ y ^ z;
+}
+u32 GG1(u32 x, u32 y, u32 z) {
+	return (x & y) | (~x & z);
+}
 
-
-#define shift_left(n,step)		((n<<step)|(n>>(32-step)))
-#define P0(X) (X^(shift_left(X,9))^(shift_left(X,17)))
-#define P1(X) (X^(shift_left(X,15))^(shift_left(X,23)))
-#define FF0(X,Y,Z) (X^Y^Z)
-#define FF1(X,Y,Z) ((X&Y)|(X|Y)&Z)
-#define GG0(X,Y,Z) ((X)^(Y)^(Z))
-#define GG1(X,Y,Z) ((X&Y)|((~X)&Z))
-
-
-uint32_t Padding(vector<bool>* input, uint32_t* M);								//消息填充
-uint32_t Padding_extend_attack(vector<bool>* input, uint32_t* M, uint64_t len);
-void Extend(uint32_t* M, uint32_t* W0, uint32_t* W1);								//消息拓展
-void Compress(uint32_t* V, uint32_t* W0, uint32_t* W1, uint32_t* res);						//压缩函数
-void SM3(vector<bool>* input, uint32_t* digest);
-void SM3_extend_attack(vector<bool>* input, uint32_t* digest, uint64_t len);					//长度扩展攻击
-
-
-uint32_t Padding(vector<bool>* input, uint32_t* M)
-{
-	uint64_t size = (*input).size(), len = size;
-	uint32_t pad_size = (447 - size + 512) % 512, temp;
-	size = size + 1 + (uint64_t)pad_size;
-	(*input).push_back(1);											//末尾添1
-	(*input).resize(size, 0);
-	for (uint32_t i = 0; i < size; i += 32)
-	{
-		temp = 0;
-		for (uint32_t j = 0; j < 31; ++j)
-		{
-			temp |= (*input)[i + j]; temp <<= 1;
+u32 shift_l(u32 a, u8 w) {
+	w = w % 32;
+	if (w == 0) {
+		return a;
+	}
+	return (a << w) ^ (a >> (32 - w));
+}
+void u8_32(u8* in, u32* out) {
+	/*
+	//原始版本
+	for (u8 i = 0; i < 4; i++) {
+		u32 temp = 0;
+		for (u8 j = 0; j < 4; j++) {
+			temp = temp ^ ((u32)in[4 * i + j] << (24 - 8 * j));
 		}
-		temp |= (*input)[i + 31];
-		M[(uint32_t)(i / 32)] = temp;
+		out[i] = temp;
 	}
-	M[(uint32_t)(size / 32)] = (uint32_t)(len >> 32);
-	M[(uint32_t)(size / 32 + 1)] = ((uint32_t)len);
-	return (uint32_t)((size / 32 + 2) / 16);								//返回分组数
+	*/
+	/*
+	//循环展开后
+	for (u8 i = 0; i < 4; i++) {
+		int ii = i << 2;
+		u32 temp = ((u32)in[ii] << 24);//循环稍微展开一下
+		temp = temp ^ ((u32)in[ii + 1] << 16);
+		temp = temp ^ ((u32)in[ii + 2] << 8);
+		temp = temp ^ (u32)in[ii + 3];
+		out[i] = temp;
+	}*/
+	//SIMD版本
+	__m128i tp = _mm_loadu_epi8(&in[0]);
+	tp = _mm_shuffle_epi8(tp, indexx);//指定个顺序避免大端小端
+	_mm_storeu_epi32(&out[0], tp);
 }
 
-uint32_t Padding_extend_attack(vector<bool>* input, uint32_t* M, uint64_t len)
+
+u32 V[8];
+u8 iin[64] = { 0 };
+
+void message_block(u8* input);
+
+void SM3(u8* input, unsigned int len, u8* output)
 {
-	uint64_t size = (*input).size();
-	uint32_t pad_size = (447 - size + 512) % 512, temp;
-	size = size + 1 + (uint64_t)pad_size;
-	(*input).push_back(1);											//末尾添1
-	(*input).resize(size, 0);
-	for (uint32_t i = 0; i < size; i += 32)
-	{
-		temp = 0;
-		for (uint32_t j = 0; j < 31; ++j)
-		{
-			temp |= (*input)[i + j]; temp <<= 1;
-		}
-		temp |= (*input)[i + 31];
-		M[(uint32_t)(i / 32)] = temp;
+	//512比特（64字节）分组，消息填充
+	//第一次的iv为初始值，固定不引用了。
+	V[0] = 0x7380166f;
+	V[1] = 0x4914b2b9;
+	V[2] = 0x172442d7;
+	V[3] = 0xda8a0600;
+	V[4] = 0xa96f30bc;
+	V[5] = 0x163138aa;
+	V[6] = 0xe38dee4d;
+	V[7] = 0xb0fb0e4e;
+	int temp_i = len >> 6;
+	for (unsigned int i = 0; i < temp_i; i++) {
+		message_block(input + (i << 6));
 	}
-	M[(uint32_t)(size / 32)] = (uint32_t)(len >> 32);							//长度拓展攻击已知前面明文的长度
-	M[(uint32_t)(size / 32 + 1)] = ((uint32_t)len);
-	return (uint32_t)((size / 32 + 2) / 16);
-}
-
-void Extend(uint32_t* M, uint32_t* W0, uint32_t* W1)								//W0和W0'消息拓展
-{
-	for (uint32_t i = 0; i < 16; i++)
-		W0[i] = M[i];
-
-	for (uint32_t i = 16; i < 68; ++i)
-		W0[i] = (P1((W0[i - 16] ^ W0[i - 9] ^ (shift_left(W0[i - 3], 15))))) ^ (shift_left(W0[i - 13], 7)) ^ W0[i - 6];
-
-	for (uint32_t i = 0; i < 64; ++i)
-		W1[i] = W0[i] ^ W0[i + 4];
-}
-
-void Compress(uint32_t* V, uint32_t* W0, uint32_t* W1, uint32_t* res)	//单分组压缩函数
-{
-	uint32_t  A, B, C, D, E, F, G, H, SS1, SS2, TT1, TT2;
-	A = V[0]; B = V[1]; C = V[2]; D = V[3]; E = V[4]; F = V[5]; G = V[6]; H = V[7];
-	for (uint32_t i = 0; i < 16; ++i)
-	{
-		SS1 = (uint32_t)shift_left((shift_left(A, 12) + E + shift_left(T0, i)), 7);
-		SS2 = SS1 ^ shift_left(A, 12);
-		TT1 = (uint32_t)(FF0(A, B, C) + D + SS2 + W1[i]);
-		TT2 = (uint32_t)(GG0(E, F, G) + H + SS1 + W0[i]);
-		D = C; C = shift_left(B, 9); B = A;
-		A = TT1; H = G; G = shift_left(F, 19);
-		F = E; E = P0(TT2);
+	//最后一组填充
+	int temp1 = (len >> 6) << 6;
+	int temp2 = len % 64;
+	for (int i = 0; i < temp2; i++) {
+		iin[i] = input[temp1 + i];
 	}
-	for (uint32_t i = 16; i < 64; ++i)
-	{
-		SS1 = (uint32_t)shift_left((shift_left(A, 12) + E + shift_left(T1, i % 32)), 7);
-		SS2 = SS1 ^ shift_left(A, 12);
-		TT1 = (uint32_t)(FF1(A, B, C) + D + SS2 + W1[i]);
-		TT2 = (uint32_t)(GG1(E, F, G) + H + SS1 + W0[i]);
-		D = C; C = shift_left(B, 9); B = A;
-		A = TT1; H = G; G = shift_left(F, 19);
-		F = E; E = P0(TT2);
-	}
-	res[0] = A ^ V[0]; res[1] = B ^ V[1];
-	res[2] = C ^ V[2]; res[3] = D ^ V[3];
-	res[4] = E ^ V[4]; res[5] = F ^ V[5];
-	res[6] = G ^ V[6]; res[7] = H ^ V[7];
-}
+	iin[temp2] = 0x80;
+	unsigned int llen = len << 3;
+	iin[60] = llen >> 24;
+	iin[61] = llen >> 16;
+	iin[62] = llen >> 8;
+	iin[63] = llen;
+	//这里的长度默认小于32，故56，57，58，59默认为0
+	message_block(iin);
 
-void SM3(vector<bool>* input, uint32_t* digest)
-{
-	uint32_t W0[68], W1[64], V[8], M[80], len;		//这里假设填充后最大长度为5个512bit分组
-	len = Padding(input, M);
-	V[0] = SM3_A; V[1] = SM3_B; V[2] = SM3_C; V[3] = SM3_D; V[4] = SM3_E; V[5] = SM3_F; V[6] = SM3_G; V[7] = SM3_H;
-	for (uint32_t i = 0; i < len; i++)				//对所有分组执行压缩函数
-	{
-		Extend(M + (i << 4), W0, W1);
-		Compress(V, W0, W1, digest);
-		for (uint32_t j = 0; j < 8; j++)			//前一次输出的V为下一次输入
-			V[j] = digest[j];
+	//返回output；
+	for (int i = 0; i < 8; i++) {
+		int ii = i << 2;
+		output[ii] = V[i] >> 24;
+		output[ii + 1] = V[i] >> 16;
+		output[ii + 2] = V[i] >> 8;
+		output[ii + 3] = V[i];
 	}
 }
-
-void SM3_extend_attack(vector<bool>* input, uint32_t* digest, uint64_t length)
+void message_block(u8* iinput)//每个消息分组处理
 {
-	uint32_t W0[68], W1[64], V[8], M[80], len;
-	len = Padding_extend_attack(input, M, length);
-	V[0] = extend_attack_A; V[1] = extend_attack_B; V[2] = extend_attack_C; V[3] = extend_attack_D;		//将起始的V替换成已有的上一轮压缩结果
-	V[4] = extend_attack_E; V[5] = extend_attack_F; V[6] = extend_attack_G; V[7] = extend_attack_H;
-	for (uint32_t i = 0; i < len; i++)
-	{
-		Extend(M + (i << 4), W0, W1);
-		Compress(V, W0, W1, digest);
-		for (uint32_t j = 0; j < 8; j++)
-			V[j] = digest[j];
+	//消息扩展
+	u32 W[68];
+	u32 W_[64];
+	for (int i = 0; i < 16; i++) {
+		u8_32(iinput + (i << 2), &W[i]);
 	}
+	u32 temp;
+	for (int i = 16; i < 68; i++) {
+		//P1(X) = X ⊕ (X ? 15) ⊕ (X ? 23)
+		//Wj ← P1(Wj?16 ⊕ Wj?9 ⊕ (Wj?3 ? 15)) ⊕ (Wj?13 ? 7) ⊕ Wj?6
+		temp = W[i - 16] ^ W[i - 9] ^ (shift_l(W[i - 3], 15));
+		temp = temp ^ (shift_l(temp, 15)) ^ (shift_l(temp, 23));
+		W[i] = temp ^ (shift_l(W[i - 13], 7)) ^ W[i - 6];
+	}
+	for (int i = 0; i < 64; i += 2) {
+		//W′j = Wj ⊕ Wj + 4
+		//循环展开
+		W_[i] = W[i] ^ W[i + 4];
+		W_[i + 1] = W[i + 1] ^ W[i + 5];
+	}
+
+	//迭代压缩
+	//迭代每一轮相关，无法多线程并行
+	u32 A = V[0];
+	u32 B = V[1];
+	u32 C = V[2];
+	u32 D = V[3];
+	u32 E = V[4];
+	u32 F = V[5];
+	u32 G = V[6];
+	u32 H = V[7];
+	u32 SS1, SS2, TT1, TT2;
+	for (int i = 0; i < 16; i++) {
+		SS1 = (shift_l(A, 12)) + E + (shift_l(T[0], i));
+		SS1 = shift_l(SS1, 7);
+		SS2 = SS1 ^ (shift_l(A, 12));
+		TT1 = FF0(A, B, C) + D + SS2 + W_[i];
+		TT2 = GG0(E, F, G) + H + SS1 + W[i];
+		D = C;
+		C = shift_l(B, 9);
+		B = A;
+		A = TT1;
+		H = G;
+		G = shift_l(F, 19);
+		F = E;
+		E = TT2 ^ (shift_l(TT2, 9)) ^ (shift_l(TT2, 17));
+	}
+	for (int i = 16; i < 64; i++) {
+		SS1 = (shift_l(A, 12)) + E + (shift_l(T[1], i));
+		SS1 = shift_l(SS1, 7);
+		SS2 = SS1 ^ (shift_l(A, 12));
+		TT1 = FF1(A, B, C) + D + SS2 + W_[i];
+		TT2 = GG1(E, F, G) + H + SS1 + W[i];
+		D = C;
+		C = shift_l(B, 9);
+		B = A;
+		A = TT1;
+		H = G;
+		G = shift_l(F, 19);
+		F = E;
+		E = TT2 ^ (shift_l(TT2, 9)) ^ (shift_l(TT2, 17));
+	}
+	V[0] = A ^ V[0];
+	V[1] = B ^ V[1];
+	V[2] = C ^ V[2];
+	V[3] = D ^ V[3];
+	V[4] = E ^ V[4];
+	V[5] = F ^ V[5];
+	V[6] = G ^ V[6];
+	V[7] = H ^ V[7];
 }
