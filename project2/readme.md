@@ -48,8 +48,8 @@ extracted
 ![05_scaling_attacked](https://github.com/user-attachments/assets/24c538c6-0beb-4369-a3b3-672d2ff1ff60)
 
 
-<img width="200" height="100" alt="06_blurring_extracted" src="https://github.com/user-attachments/assets/3de8d905-6fa9-4f20-883b-
-869ca0f87f57" />
+
+<img width="200" height="100" alt="06_blurring_extracted" src="https://github.com/user-attachments/assets/80806436-dca5-4f58-844a-df5710dd19ea" />
 
 
 <img width="200" height="100" alt="06_contrast_change_extracted" src="https://github.com/user-attachments/assets/21d4a8e0-8fb2-4e86-8e82-f79960cf451c" />
