@@ -43,3 +43,17 @@ def naf_window_mult(k, point, a, p, w=5):
 
 集成优化之后的结果
 <img width="2518" height="679" alt="image" src="https://github.com/user-attachments/assets/f9bdec8f-713c-41d7-8a26-724f367055a0" />
+
+## b
+### 1）相同用户重用随机数k
+
+### 2）不同用户使用相同k
+
+### 3）与ECDSA公用（d，k）
+
+### 4）k值泄漏
+代码验证得到，四个签名误用都会导致密钥泄露
+<img width="1323" height="1285" alt="image" src="https://github.com/user-attachments/assets/b90b88b7-3f88-4c99-9d3c-b4f512c0876d" />
+
+## c Satoshi签名伪造
+
