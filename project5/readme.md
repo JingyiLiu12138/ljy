@@ -57,3 +57,6 @@ def naf_window_mult(k, point, a, p, w=5):
 
 ## c Satoshi签名伪造
 
+<img width="1961" height="239" alt="image" src="https://github.com/user-attachments/assets/8a8d7a69-ccaf-49fb-b630-7699a4be2e25" />
+
+
