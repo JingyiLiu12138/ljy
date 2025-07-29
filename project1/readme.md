@@ -9,3 +9,4 @@
 <img width="1538" height="247" alt="image" src="https://github.com/user-attachments/assets/7431076c-edd4-4728-b6df-c0596c7a3e10" />
 
 ## b): 基于SM4的实现，做SM4-GCM工作模式的软件优化实现
+<img width="1400" height="217" alt="image" src="https://github.com/user-attachments/assets/f047619d-b704-4271-83da-4f5f5bf7301e" />
