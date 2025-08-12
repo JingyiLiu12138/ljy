@@ -85,6 +85,7 @@ component main = PoseidonHash2();
 ## 实验结果
 ### 1. 输出结果
 <img width="639" height="529" alt="8790fa1861811647ec5098620740d4a" src="https://github.com/user-attachments/assets/19b507ff-1823-4d73-91f5-aee0826ab0d1" />
+
 | 指标                 | 值    |
 |----------------------|-------|
 | template instances   | 69    |
@@ -138,16 +139,3 @@ component main = PoseidonHash2();
 
 ---
 
-## 附录：关键文件树
-```
-.
-├── circuit/
-│   ├── poseidon2.circom    # 电路源码
-├── out/
-│   ├── poseidon2.r1cs       # 约束系统
-│   ├── poseidon2_0001.zkey  # 证明密钥
-│   └── verification_key.json
-└── scripts/
-    ├── compile.sh           # 自动编译脚本
-    └── verify.sh            # 验证脚本
-```
