@@ -68,9 +68,7 @@ component main = PoseidonHash2();
 
 ## 实验步骤
 ### 1. 编译电路
-```bash
-circom poseidon2.circom --r1cs --wasm --sym
-```
+利用zkREPL在线编译poseidon2.circom文件。
 生成文件说明：  
 | 文件                 | 用途                            |
 |----------------------|---------------------------------|
@@ -78,47 +76,53 @@ circom poseidon2.circom --r1cs --wasm --sym
 | `poseidon2.wasm`     | Witness计算模块（WebAssembly）  |
 | `poseidon2.sym`      | 信号映射表（调试定位约束错误）  |
 
-### 2. 可信设置
-```bash
-snarkjs powersoftau new bn128 12 pot12_0000.ptau
-snarkjs groth16 setup poseidon2.r1cs pot12_final.ptau poseidon2_0001.zkey
+### 2. 输入参数`INPUT`
+```/* INPUT ={
+  "in": ["123", "456"]
+}*/
 ```
-
-### 3. 计算见证
-输入文件`input.json`：
-```json
-{ "in": ["123", "456"] }
-```
-生成见证：
-```bash
-node generate_witness.js poseidon2.wasm input.json witness.wtns
-```
-
-### 4. 生成证明
-```bash
-snarkjs groth16 prove poseidon2_0001.zkey witness.wtns proof.json public.json
-```
-
----
 
 ## 实验结果
-### 1. 性能指标
-| 指标               | 值           |
-|--------------------|--------------|
-| 约束总数           | 2,145        |
-| Witness计算时间    | 85 ms        |
-| 证明生成时间       | 320 ms       |
-| 证明体积           | 1.7 KB       |
-| 验证时间           | 18 ms        |
+### 1. 输出结果
+<img width="639" height="529" alt="8790fa1861811647ec5098620740d4a" src="https://github.com/user-attachments/assets/19b507ff-1823-4d73-91f5-aee0826ab0d1" />
+| 指标                 | 值    |
+|----------------------|-------|
+| template instances   | 69    |
+| non-linear constraints | 240   |
+| linear constraints   | 0     |
+| public inputs        | 0     |
+| public outputs       | 1     |
+| private inputs       | 2     |
+| private outputs      | 0     |
+| wires                | 243   |
+| labels               | 1111  |
 
-### 2. 正确性验证
-```bash
-snarkjs groth16 verify verification_key.json public.json proof.json
-```
-输出：
-```text
-[INFO]  snarkJS: OK! Proof is valid
-```
+### 2. PLONK验证
+生成PLONK验证器和验证者密钥，以及一个solidity验证合同和示例交互式的SnarklS网络应用程序：
+<img width="577" height="207" alt="df14e93c69befb9e982b2935e5dbe2d" src="https://github.com/user-attachments/assets/65ef7d69-b66c-4bda-9b3c-5456f7ee4a0e" />
+| 文件名           | 描述                         |
+|------------------|------------------------------|
+| `untitled.r1cs` | R1CS格式的约束系统            |
+|                  | 包含所有算术约束的方程组      |
+| `untitled.wasm` | WebAssembly模块              |
+|                  | 用于高效计算witness          |
+| `untitled.sym`  | 符号表                       |
+|                  | 调试时映射信号名与信号ID      |
+
+
+### 3. Grouth16生成证明
+生成Grouth16的证明者和验证者密钥，以及一个solidity验证合同和示例交互式的SnarklS网络应用程序：
+<img width="627" height="217" alt="565a0e7691cc0243fa7f7d4d5ba4d10" src="https://github.com/user-attachments/assets/8f3ccefd-0a45-4afa-9283-98f6a1aaa99c" />
+| 文件名                   | 说明                   |
+|--------------------------|------------------------|
+| `untitled.groth16.zkey`    | 完整的证明密钥         |
+| `untitled.groth16.vkey.json `  | 验证密钥          |
+| `untitled.groth16.sol `       |solidity验证合同     |
+
+### 4. 正确性验证
+上传ZKey，曲儿其是基于与当前zkREPL相同的原代码编译而成的
+<img width="1051" height="1289" alt="1e0cbcb132167f4cf58239cc6740f59" src="https://github.com/user-attachments/assets/be560aca-ff6d-4bd1-9711-ee119869206d" />
+
 
 ---
 
@@ -139,7 +143,6 @@ snarkjs groth16 verify verification_key.json public.json proof.json
 .
 ├── circuit/
 │   ├── poseidon2.circom    # 电路源码
-│   └── input.json           # 测试输入
 ├── out/
 │   ├── poseidon2.r1cs       # 约束系统
 │   ├── poseidon2_0001.zkey  # 证明密钥
