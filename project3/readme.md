@@ -10,41 +10,42 @@
 3. circom电路样例 https://github.com/iden3/circomlib
 
 ## 实验原理
-以下是根据内容整理的规范 Markdown 格式：
 
-```markdown
 ### 1. Poseidon2哈希算法原理
 Poseidon是一种基于置换的STARK友好哈希算法，核心原理如下：
 
 #### 1.1 核心数学结构
-**1.1.1 海绵结构（Sponge Construction）**
+**海绵结构（Sponge Construction）**  
 ```math
 \begin{aligned}
 &S = \{s_0, s_1, \dots, s_{t-1}\} \in \mathbb{F}^t \\
 &\text{状态容量} = t \text{个域元素} \\
-&\text{速率} = r \quad \text{(容量} = c = t - r\text{)}
+&\text{速率域 } r = t - c\ \text{(容量域)}
 \end{aligned}
 ```
-其中 $\mathbb{F}$ 为素数域（如 BN254, BLS12-381 等）
+其中 $\mathbb{F}$ 为素数域（e.g. BN254, BLS12-381等）
 
-**1.1.2 算法流程**
+#### 1.2 算法流程
 ```mermaid
 flowchart TD
-    A[输入消息] --> B(填充至 r 的倍数)
-    B --> C[初始化状态: S = 0ᵗ]
+    A[输入消息] --> B(填充至r的倍数)
+    B --> C[初始化状态: S = 0^t]
     C --> D{消息分块处理}
-    D -->|吸收块| E[状态累加: S[0:r] += Mᵢ]
+    D -->|吸收块| E[状态累加: S[0:r] += M_i]
     E --> F{是否完成?}
-    F -->|否| G[应用置换函数 F]
+    F -->|否| G[应用置换函数F]
     G --> D
     F -->|是| H[输出哈希]
-    H -->|前 r 元素| I[应用置换函数 F]
+    H -->|前r元素| I[应用置换函数F]
     I --> J[截取输出长度]
 ```
 
-#### 1.2 置换函数（Permutation）核心
-**1.2.1 置换函数结构**
+---
+
+### 2. 置换函数（Permutation）核心
+#### 2.1 置换函数结构
 $$F = Linear \circ PartialRound \circ Linear \circ FullRound$$
+
 ```python
 def F(S):
     S = FullRound(S)     # 全轮函数
@@ -54,70 +55,69 @@ def F(S):
     return S
 ```
 
-**1.2.2 Full Round（全轮函数）**
-| 步骤 | 运算 | 数学表示 |
-|------|------|----------|
-| 1 | 添加常数 | $S = S + RC_i$ |
-| 2 | S-box应用 | $\forall j,\ S_j^{(k+1)} = \left(S_j^{(k)}\right)^\alpha$ |
-| 3 | MDS混合 | $S^{(k+1)} = M \cdot S^{(k)}$ |
+#### 2.2 Full Round（全轮函数）
+| 步骤 | 运算          | 数学表示                          |
+|------|---------------|-----------------------------------|
+| 1    | 添加常数      | $S = S + RC_i$                   |
+| 2    | S-box应用     | $\forall j,\ S_j^{(k+1)} = \left(S_j^{(k)}\right)^\alpha$ |
+| 3    | MDS混合       | $S^{(k+1)} = M \cdot S^{(k)}$    |
 
-**参数说明**：
-- **指数选择**：$\alpha$ 取 5 ($x^5$) 或 3 ($x^3$)
-- **MDS矩阵**：最大距离可分离矩阵（保证扩散性）
+**指数选择**：$\alpha$ 取 5 (x⁵) 或 3 (x³)  
+**MDS矩阵**：最大距离可分离矩阵（保证扩散性）
 
-**1.2.3 Partial Round（部分轮函数）**
-- 仅对**首状态元素**应用非线性
-- 数学表示：
-  ```math
-  S_j^{(k+1)} = 
-  \begin{cases} 
+#### 2.3 Partial Round（部分轮函数）
+- 仅对**单状态元素**应用非线性
+- 数学表示：  
+  $$S_j^{(k+1)} = 
+  \begin{cases}
   \left(S_j^{(k)}\right)^\alpha & j=0 \\
-  S_j^{(k)} & \text{其他}
-  \end{cases}
-  ```
+  S_j^{(k)} & \text{otherwise}
+  \end{cases}$$
 
-**1.2.4 Linear Layer（线性层）**
+#### 2.4 Linear Layer（线性层）
 ```math
-\begin{bmatrix}
+\left[ \begin{array}{c}
 s_0' \\
 s_1' \\
 \vdots \\
-s_{t-1}'
-\end{bmatrix}
-= M_{mds} \times
-\begin{bmatrix}
+s_{t-1}' \\
+\end{array} \right] = 
+M_{mds} \times 
+\left[ \begin{array}{c}
 s_0 \\
 s_1 \\
 \vdots \\
-s_{t-1}
-\end{bmatrix}
+s_{t-1} \\
+\end{array} \right]
 ```
-**特性**：
-- $det(M_{mds}) \neq 0$（保证可逆性）
+**特殊性质**：$det(M_{mds}) \neq 0$（可逆性保证）
 
-#### 1.3 安全设计参数
-**1.3.1 轮数配置**
-| 函数类型 | 参数 | 典型值(t=12) |
-|----------|------|--------------|
-| Full Round | $R_F$ | 8 |
-| Partial Round | $R_P$ | 22 |
-| **总轮数** | $R = R_F + R_P$ | **30** |
+---
 
-**1.3.2 抗攻击保证**
-- **统计饱和攻击**：$R_P \geq 50$ 轮防御
-- **代数攻击**：多重二次方程系统防护
-- **差分分析**：最小活跃 S-box 约束
+### 3. 安全设计参数
+#### 3.1 轮数配置
+| 函数类型   | 参数   | 典型值(t=12) |
+|------------|--------|--------------|
+| Full Round | $R_F$  | 8            |
+| Partial Round | $R_P$ | 22           |
+| **总轮数** | $R = R_F + R_P$ | **30轮**     |
 
-#### 1.4 性能优化创新
-**1.4.1 域运算优化**
-- **免反演运算**：$x^5$ S-box 设计
-- **SIMD 友好**：  
-  线性层矩阵分解：
+#### 3.2 抗攻击保证
+- **统计饱和攻击**：$R_P$ 保证 ≥ 50轮
+- **代数攻击**：多重二次方程系统
+- **差分分析**：最小活跃S-box约束
+
+---
+
+### 4. 性能优化创新
+#### 4.1 域运算优化
+- **免反演运算**：基于 $x^5$ 的 S-box设计  
+- **SIMD友好**：线性层矩阵可分解为  
   ```math
   M_{mds} = \begin{bmatrix} A & 0 \\ 0 & I \end{bmatrix} \times \begin{bmatrix} I & B \\ C & D \end{bmatrix}
   ```
 
-**1.4.2 并行化策略**
+#### 4.2 并行化策略
 ```mermaid
 flowchart LR
     A[输入状态] --> B(S-box层)
@@ -125,10 +125,11 @@ flowchart LR
     C -->|t通道| D[MDS乘法]
     D --> E[累加输出]
 ```
-```
 
 
-**1.4.3 与传统哈希对比** 
+
+### 5. 与其他算法的对比
+#### 5.1与传统哈希对比
 
 | 特性         | SHA-256 | Poseidon2 |
 |--------------|---------|-----------|
@@ -138,7 +139,7 @@ flowchart LR
 | 轮函数复杂度 | 高      | 低        |
 | 证明生成速度 | 慢      | 快 (10-100x) |
 
-**1.4.4 与Poseidon对比
+#### 5.2 与Poseidon对比
 
 | 特性 | Poseidon | Poseidon2 |
 |------|----------|-----------|
