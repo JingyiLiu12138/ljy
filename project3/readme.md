@@ -12,19 +12,118 @@
 ## 实验原理
 ### 1. Poseidon2哈希算法原理
 Poseidon是一种基于置换的STARK友好哈希算法，核心原理如下：
-1. **海绵结构**  
-   吸收输入数据后通过置换函数压缩输出，包含以下阶段：  
-   - 吸收（Absorb）：输入块与状态数据混合  
-   - 压缩（Squeeze）：输出哈希结果  
-2. **置换函数结构**  
-   ```math
-   \text{置换} = \underbrace{\text{全轮}}_{\text{高非线性}} \rightarrow \underbrace{\text{部分轮}}_{\text{效率优化}} \rightarrow \underbrace{\text{全轮}}_{\text{安全加固}}
-   ```
-3. **数学基础**  
-   - **MDS矩阵**：最大距离可分离矩阵，确保充分扩散  
-   - **S-Box**：非线性变换层，使用$x^5$设计优化代数次数  
-   - **轮常数**：消除对称性和固定点  
-4. **与传统哈希对比** 
+1. 核心数学结构
+
+1.1 海绵结构（Sponge Construction）
+```math
+\begin{aligned}
+&S = \{s_0, s_1, \dots, s_{t-1}\} \in \mathbb{F}^t \\
+&\text{状态容量} = t \text{个域元素} \\
+&\text{速率域} r = t - c\ \text{(容量域)}
+\end{aligned}
+```
+其中$\mathbb{F}$为素数域（e.g. BN254, BLS12-381等）
+
+1.2 算法流程
+```mermaid
+flowchart TD
+    A[输入消息] --> B(填充至r的倍数)
+    B --> C[初始化状态: S = 0^t]
+    C --> D{消息分块处理}
+    D -->|吸收块| E[状态累加: S[0:r] += M_i]
+    E --> F{是否完成?}
+    F -->|否| G[应用置换函数F]
+    G --> D
+    F -->|是| H[输出哈希]
+    H -->|前r元素| I[应用置换函数F]
+    I --> J[截取输出长度]
+```
+
+2. 置换函数（Permutation）核心
+
+2.1 置换函数结构
+$$F = Linear \circ PartialRound \circ Linear \circ FullRound$$
+```python
+def F(S):
+    S = FullRound(S)     # 全轮函数
+    S = LinearLayer(S)   # 线性层
+    S = PartialRound(S)  # 部分轮函数
+    S = LinearLayer(S)   # 线性层
+    return S
+```
+
+2.2 Full Round（全轮函数）
+| 步骤 | 运算 | 数学表示 |
+|------|------|----------|
+| 1 | 添加常数 | $S = S + RC_i$ |
+| 2 | S-box应用 | $\forall j,\ S_j^{(k+1)} = \left(S_j^{(k)}\right)^\alpha$ |
+| 3 | MDS混合 | $S^{(k+1)} = M \cdot S^{(k)}$ |
+
+**指数选择**：$\alpha$取5 (x⁵) 或 3 (x³)  
+**MDS矩阵**：最大距离可分离矩阵（保证扩散性）
+
+2.3 Partial Round（部分轮函数）
+- 仅对**单状态元素**应用非线性
+- 数学表示：
+  $$S_j^{(k+1)} = 
+  \begin{cases} 
+  \left(S_j^{(k)}\right)^\alpha & j=0 \\
+  S_j^{(k)} & \text{otherwise}
+  \end{cases}$$
+
+2.4 Linear Layer（线性层）
+```math
+\left[ \begin{array}{c}
+s_0' \\
+s_1' \\
+\vdots \\
+s_{t-1}' \\
+\end{array} \right] = 
+M_{mds} \times 
+\left[ \begin{array}{c}
+s_0 \\
+s_1 \\
+\vdots \\
+s_{t-1} \\
+\end{array} \right]
+```
+**特殊性质**：  
+$det(M_{mds}) \neq 0$（可逆性保证）
+
+3. 安全设计参数
+
+3.1 轮数配置
+| 函数类型 | 参数 | 典型值(t=12) |
+|----------|------|--------------|
+| Full Round | $R_F$ | 8 |
+| Partial Round | $R_P$ | 22 |
+| **总轮数** | $R = R_F + R_P$ | **30轮** |
+
+3.2 抗攻击保证
+- **统计饱和攻击**：$R_P$保证≥ 50轮
+- **代数攻击**：多重二次方程系统
+- **差分分析**：最小活跃S-box约束
+
+4. 性能优化创新
+
+4.1 域运算优化
+- **免反演运算**：基于$x^5$的S-box设计  
+- **SIMD友好**：  
+  线性层矩阵可分解为
+  ```math
+  M_{mds} = \begin{bmatrix} A & 0 \\ 0 & I \end{bmatrix} \times \begin{bmatrix} I & B \\ C & D \end{bmatrix}
+  ```
+
+4.2 并行化策略
+```mermaid
+flowchart LR
+    A[输入状态] --> B(S-box层)
+    B --> C[并行计算]
+    C -->|t通道| D[MDS乘法]
+    D --> E[累加输出]
+```
+
+5. **与传统哈希对比** 
 
 | 特性         | SHA-256 | Poseidon2 |
 |--------------|---------|-----------|
@@ -34,6 +133,15 @@ Poseidon是一种基于置换的STARK友好哈希算法，核心原理如下：
 | 轮函数复杂度 | 高      | 低        |
 | 证明生成速度 | 慢      | 快 (10-100x) |
 
+6. 与Poseidon对比
+
+| 特性 | Poseidon | Poseidon2 |
+|------|----------|-----------|
+| **轮函数结构** | 均匀全轮 | 混合轮结构 |
+| **计算复杂度** | O(t²·R) | O(t·log t·R) |
+| **硬件友好度** | 中等 | 高（流水线优化） |
+| **抗侧信道** | 基础 | 增强 |
+| **S-box应用** | 全元素 | 选择性 |
 
 
 ### 2. 零知识证明原理
