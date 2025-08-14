@@ -210,15 +210,6 @@ def scenario4_k_leakage():
    - Q为签名者公钥（Q = d·G）
 
 6. **验证签名**  
-   $$r \equiv x₂ \pmod{n}$$
-$$ P = u_1 \cdot G + u_2 \cdot Q $$
-$$ = (e \cdot w)G + (r \cdot w)Q $$
-$$ = w(e \cdot G + r \cdot Q) $$
-$$ = s^{-1}(e \cdot G + r \cdot (d \cdot G)) $$
-$$ = s^{-1}(e + r \cdot d)G $$
-$$ = k \cdot G $$
-
-
 ∵ $s = k^{-1}(e + d \cdot r)$  
 ∴ $k = s^{-1}(e + d \cdot r)$  
 ⇒ $P = k \cdot G$  
