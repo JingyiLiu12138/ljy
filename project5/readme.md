@@ -166,14 +166,71 @@ def scenario4_k_leakage():
 ## 实验原理
 
 ### ECDSA签名机制
-``` mermaid
+签名生成过程：
+1. **计算消息哈希**  
+   $$e = HASH(m)$$
+   - 使用加密哈希函数（如SHA-256）处理消息
+   
+2. **生成随机数**  
+   $$k \in [1, n-1]$$  
+   - n是椭圆曲线基点G的阶数
 
-graph TD
-    A[选择随机数 k] --> B[计算 R = k*G]
-    B --> C[r = R.x mod n]
-    C --> D[''s = k^{-1} * (e + d*r) mod n'']
-    D --> E[输出签名 (r,s)]
-```
+3. **计算曲线点**  
+   $$(x₁, y₁) = k \cdot G$$
+
+4. **计算r值**  
+   $$r = x₁ \mod n$$  
+   - 如果r=0则重新选择k
+
+5. **计算s值**  
+   $$s = k^{-1}(e + d \cdot r) \mod n$$  
+   - d为签名者私钥
+   - k⁻¹是k模n的乘法逆元
+
+6. **输出签名**  
+   $$(r, s)$$  
+   - 如果s=0则重新选择k
+
+## 签名验证过程
+1. **参数有效性检查**  
+   $$r \in [1, n-1], s \in [1, n-1]$$
+
+2. **计算消息哈希**  
+   $$e = HASH(m)$$
+
+3. **计算逆元**  
+   $$w = s^{-1} \mod n$$
+
+4. **计算中间参数**  
+   $$u₁ = e \cdot w \mod n$$  
+   $$u₂ = r \cdot w \mod n$$
+
+5. **计算曲线点**  
+   $$(x₂, y₂) = u₁ \cdot G + u₂ \cdot Q$$  
+   - Q为签名者公钥（Q = d·G）
+
+6. **验证签名**  
+   $$r \equiv x₂ \pmod{n}$$
+
+## 数学验证原理
+验证公式推导：
+$$ 
+\begin{aligned}
+P &= u₁ \cdot G + u₂ \cdot Q \\
+  &= (e \cdot w) \cdot G + (r \cdot w) \cdot (d \cdot G) \\
+  &= w \cdot (e \cdot G + r \cdot d \cdot G) \\
+  &= w \cdot (e + r \cdot d) \cdot G \\
+  &= s^{-1} \cdot (e + r \cdot d) \cdot G \\
+  &= k \cdot G
+\end{aligned}
+$$
+
+∵ $s = k^{-1}(e + d \cdot r)$  
+∴ $k = s^{-1}(e + d \cdot r)$  
+⇒ $P = k \cdot G$  
+最终 $x₂ \equiv x₁ \pmod{n} \Rightarrow r \equiv x₂ \pmod{n}$
+
+
 ## 实验内容
 1.签名伪造
 ``` python
