@@ -31,7 +31,7 @@ flowchart TD
     A[输入消息] --> B(填充至r的倍数)
     B --> C[初始化状态: S = 0^t]
     C --> D{消息分块处理}
-    D -->|吸收块| E[状态累加: S[0:r] += M_i]
+    D -->|吸收块| E[状态累加: S[0:r] += M[_i]
     E --> F{是否完成?}
     F -->|否| G[应用置换函数F]
     G --> D
@@ -42,7 +42,7 @@ flowchart TD
 
 ---
 
-### 1.3. 置换函数（Permutation）核心
+#### 1.3. 置换函数（Permutation）核心
 1.置换函数结构
 $$F = Linear \circ PartialRound \circ Linear \circ FullRound$$
 
