@@ -11,127 +11,20 @@
 
 ## 实验原理
 ### 1. Poseidon2哈希算法原理
-Poseidon2 是基于海绵结构的零知识证明友好型哈希函数，其设计特别适用于零知识证明系统。下面我们通过数学推导详细解析其设计原理。
-1. 海绵结构基础
-
-Poseidon2 采用海绵结构，定义在有限域 $GF(p)$ 上（$p$ 为大素数）。海绵结构包含两个阶段：
-
-(1) **吸收阶段**：输入消息 $M$ 被分为 $r$ 长度的块（$r$ 为速率）
-(2) **挤压阶段**：输出哈希值
-
-状态表示为：$S = (s_0, s_1, \dots, s_{t-1}) \in \mathbb{F}_p^t$  
-其中 $t = r + c$（$c$ 为容量）
-
-2. 置换核心设计
-
-Poseidon2 的核心是置换函数 $f: \mathbb{F}_p^t \rightarrow \mathbb{F}_p^t$，包含三种操作：
-
-(1) Add-Round Constants (ARC)
-
-$$ \text{ARC}_i(S) = S + C_i $$
-其中 $C_i \in \mathbb{F}_p^t$ 是预先计算的轮常数
-
-(2) SubWords (S-Box 层)
-
-使用单项式 S-Box：$x^\alpha$（常用 $\alpha=5$ 或 $\alpha=3$）
-
-$$ \text{S-Box}(S) = (s_0^\alpha, s_1^\alpha, \dots, s_{t-1}^\alpha) $$
-
-(3) MixLayer (线性层)
-
-使用 MDS 矩阵 $M \in \mathbb{F}_p^{t \times t}$ 确保完全扩散：
-
-$$ \text{MixLayer}(S) = M \cdot S $$
-
-其中 $M$ 满足：任何非零输入差异会导致至少 $t + 1$ 个输出差异
-
-3. 完整置换函数
-
-Poseidon2 使用优化的轮结构：
-
-```math
-f(S) = \underbrace{\text{ExternalFullRounds}}_{R_f} \circ \underbrace{\text{PartialRounds}}_{R_p} \circ \underbrace{\text{ExternalFullRounds}}_{R_f}
-```
-
-其中：
-- $R_f$：完全轮数（通常 2-8 轮）
-- $R_p$：部分轮数（通常 22-60 轮）
-
-完全轮结构
-$$
-\begin{aligned}
-\text{FullRound}_i(S) = &\text{ } \\
-&1.\ \text{ARC}(S + C_i) \\
-&2.\ \text{Apply S-Box to ALL elements} \\
-&3.\ \text{Apply MDS matrix } M
-\end{aligned}
-$$
-
-部分轮结构
-$$
-\begin{aligned}
-\text{PartialRound}_i(S) = &\text{ } \\
-&1.\ \text{ARC}(S + C_i) \\
-&2.\ \text{Apply S-Box ONLY to first element } s_0^\alpha \\
-&3.\ \text{Apply MDS matrix } M
-\end{aligned}
-$$
-
-4. 安全参数选择
-
-(1) S-Box 选择
-- 幂函数 $x^\alpha$ 需满足：
-  - $\gcd(\alpha, p-1) = 1$（保证可逆性）
-  - 非线性度最大化
-  - $\alpha=5$ 在多个域上表现优良
-
-(2) MDS 矩阵构造
-使用 Cauchy 矩阵确保 MDS 属性：
-$$ M_{ij} = \frac{1}{x_i + y_j} $$
-其中 $x_i, y_j$ 是域中互不相同的元素
-(3) 轮数确定
-通过 HADES 设计策略确保：
-- 抵抗统计攻击
-- 抵抗代数攻击
-- 抵抗差分/线性密码分析
-
-轮数下限公式：
-$$ R \geq 2 \cdot \left\lceil \frac{2\log t}{\log \alpha} \right\rceil + R_{\text{安全}} $$
-5. 完整哈希流程
-
-输入处理：
-(1) 消息填充：$ \text{pad}(M) = M \parallel 1 \parallel 0^k $ 使长度 $\equiv 0 \pmod{r}$
-(2) 分块：$ M = B_0 \parallel B_1 \parallel \cdots \parallel B_{n-1} $
-
-海绵操作：
-```math
-\begin{array}{c}
-\text{Initialize state } S = 0 \\
-\downarrow \\
-\text{For each block } B_i: \\
-\quad S[0:r-1] \leftarrow S[0:r-1] + B_i \\
-\quad S \leftarrow f(S) \\
-\downarrow \\
-\text{Output } H = S[0:r-1] \quad (\text{truncated if needed})
-\end{array}
-```
-
-6. 代数分析
-
-置换函数的度数
-每轮增加代数复杂度：
-- 完全轮：所有分量度数乘以 $\alpha$
-- 部分轮：第一分量度数乘以 $\alpha$
-
-经过 $R$ 轮后，多项式度数上限：
-$$ \deg(f) \leq \alpha^{R_f} \cdot \alpha^{R_p} = \alpha^{R_f + R_p} $$
-
-安全边界
-为防止插值攻击，要求：
-$$ \alpha^R > 2^{\lambda} $$
-其中 $\lambda$ 为安全参数（如 $\lambda=128$）
-
-7. 与传统哈希对比
+Poseidon是一种基于置换的STARK友好哈希算法，核心原理如下：
+1. **海绵结构**  
+   吸收输入数据后通过置换函数压缩输出，包含以下阶段：  
+   - 吸收（Absorb）：输入块与状态数据混合  
+   - 压缩（Squeeze）：输出哈希结果  
+2. **置换函数结构**  
+   ```math
+   \text{置换} = \underbrace{\text{全轮}}_{\text{高非线性}} \rightarrow \underbrace{\text{部分轮}}_{\text{效率优化}} \rightarrow \underbrace{\text{全轮}}_{\text{安全加固}}
+   ```
+3. **数学基础**  
+   - **MDS矩阵**：最大距离可分离矩阵，确保充分扩散  
+   - **S-Box**：非线性变换层，使用$x^5$设计优化代数次数  
+   - **轮常数**：消除对称性和固定点  
+4. **与传统哈希对比** 
 
 | 特性         | SHA-256 | Poseidon2 |
 |--------------|---------|-----------|
