@@ -42,8 +42,8 @@ flowchart TD
 
 ---
 
-### 2. 置换函数（Permutation）核心
-#### 2.1 置换函数结构
+### 1.3. 置换函数（Permutation）核心
+1.置换函数结构
 $$F = Linear \circ PartialRound \circ Linear \circ FullRound$$
 
 ```python
@@ -55,7 +55,7 @@ def F(S):
     return S
 ```
 
-#### 2.2 Full Round（全轮函数）
+2.Full Round（全轮函数）
 | 步骤 | 运算          | 数学表示                          |
 |------|---------------|-----------------------------------|
 | 1    | 添加常数      | $S = S + RC_i$                   |
@@ -65,16 +65,12 @@ def F(S):
 **指数选择**：$\alpha$ 取 5 (x⁵) 或 3 (x³)  
 **MDS矩阵**：最大距离可分离矩阵（保证扩散性）
 
-#### 2.3 Partial Round（部分轮函数）
+3. Partial Round（部分轮函数）
 - 仅对**单状态元素**应用非线性
 - 数学表示：  
-  $$S_j^{(k+1)} = 
-  \begin{cases}
-  \left(S_j^{(k)}\right)^\alpha & j=0 \\
-  S_j^{(k)} & \text{otherwise}
-  \end{cases}$$
+  $$S_j^{(k+1)} = \begin{cases} \left(S_j^{(k)}\right)^\alpha & j=0 \\ S_j^{(k)} & \text{otherwise} \end{cases}$$
 
-#### 2.4 Linear Layer（线性层）
+4. Linear Layer（线性层）
 ```math
 \left[ \begin{array}{c}
 s_0' \\
@@ -90,34 +86,33 @@ s_1 \\
 s_{t-1} \\
 \end{array} \right]
 ```
-**特殊性质**：$det(M_{mds}) \neq 0$（可逆性保证）
 
 ---
 
-### 3. 安全设计参数
-#### 3.1 轮数配置
+#### 1.4. 安全设计参数
+1. 轮数配置
 | 函数类型   | 参数   | 典型值(t=12) |
 |------------|--------|--------------|
 | Full Round | $R_F$  | 8            |
 | Partial Round | $R_P$ | 22           |
 | **总轮数** | $R = R_F + R_P$ | **30轮**     |
 
-#### 3.2 抗攻击保证
+2. 抗攻击保证
 - **统计饱和攻击**：$R_P$ 保证 ≥ 50轮
 - **代数攻击**：多重二次方程系统
 - **差分分析**：最小活跃S-box约束
 
 ---
 
-### 4. 性能优化创新
-#### 4.1 域运算优化
+#### 1.5 性能优化创新
+1. 域运算优化
 - **免反演运算**：基于 $x^5$ 的 S-box设计  
 - **SIMD友好**：线性层矩阵可分解为  
   ```math
   M_{mds} = \begin{bmatrix} A & 0 \\ 0 & I \end{bmatrix} \times \begin{bmatrix} I & B \\ C & D \end{bmatrix}
   ```
 
-#### 4.2 并行化策略
+2. 并行化策略
 ```mermaid
 flowchart LR
     A[输入状态] --> B(S-box层)
@@ -128,8 +123,8 @@ flowchart LR
 
 
 
-### 5. 与其他算法的对比
-#### 5.1与传统哈希对比
+#### 1.6 与其他算法的对比
+1.与传统哈希对比
 
 | 特性         | SHA-256 | Poseidon2 |
 |--------------|---------|-----------|
@@ -138,8 +133,7 @@ flowchart LR
 | ZKP 友好度   | 低      | 高        |
 | 轮函数复杂度 | 高      | 低        |
 | 证明生成速度 | 慢      | 快 (10-100x) |
-
-#### 5.2 与Poseidon对比
+2. 与Poseidon对比
 
 | 特性 | Poseidon | Poseidon2 |
 |------|----------|-----------|
