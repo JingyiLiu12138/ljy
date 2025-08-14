@@ -211,19 +211,13 @@ def scenario4_k_leakage():
 
 6. **验证签名**  
    $$r \equiv x₂ \pmod{n}$$
+$$ P = u_1 \cdot G + u_2 \cdot Q $$
+$$ = (e \cdot w)G + (r \cdot w)Q $$
+$$ = w(e \cdot G + r \cdot Q) $$
+$$ = s^{-1}(e \cdot G + r \cdot (d \cdot G)) $$
+$$ = s^{-1}(e + r \cdot d)G $$
+$$ = k \cdot G $$
 
-## 数学验证原理
-验证公式推导：
-$$ 
-\begin{aligned}
-P &= u₁ \cdot G + u₂ \cdot Q \\
-  &= (e \cdot w) \cdot G + (r \cdot w) \cdot (d \cdot G) \\
-  &= w \cdot (e \cdot G + r \cdot d \cdot G) \\
-  &= w \cdot (e + r \cdot d) \cdot G \\
-  &= s^{-1} \cdot (e + r \cdot d) \cdot G \\
-  &= k \cdot G
-\end{aligned}
-$$
 
 ∵ $s = k^{-1}(e + d \cdot r)$  
 ∴ $k = s^{-1}(e + d \cdot r)$  
